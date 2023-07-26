@@ -13,6 +13,7 @@ from mmrazor.models.task_modules.demo_inputs import DefaultDemoInput
 from mmrazor.models.task_modules.estimators import ResourceEstimator
 from mmrazor.registry import HOOKS, TASK_UTILS
 from mmrazor.utils import RuntimeInfo, print_log
+#  from chef.
 
 
 def get_model_from_runner(runner):
@@ -152,6 +153,9 @@ class ResourceInfoHook(Hook):
             model = get_model_from_runner(runner)
             current_delta = self._evaluate(model)[self.resource_type]
             percent = current_delta / self.origin_delta
+            print_log(
+                f'current {self.resource_type}: {current_delta} / {self.origin_delta}'  # noqa
+            )
             if percent < self.save_ckpt_thr[0]:
                 self._save_checkpoint(model, runner.work_dir,
                                       self.save_ckpt_thr.pop(0))

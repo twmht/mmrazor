@@ -64,11 +64,19 @@ class GroupFisherChannelUnit(L1MutableChannelUnit):
         self._register_mutable_channel(self.mutable_channel)
 
     # prune
-    def try_to_prune_min_channel(self) -> bool:
+    def try_to_prune_min_channel(self, index) -> bool:
         """Prune the channel with the minimum value of fisher information."""
+        assert self.mutable_channel.activated_channels > 1
         if self.mutable_channel.activated_channels > 1:
             imp = self.importance()
-            index = imp.argmin()
+            #  aa=imp.argmin()
+            #  print(aa)
+            #  nonzero = self.mutable_channel.current_mask.nonzero()
+            #  index = imp[nonzero].argmin()
+            assert self.mutable_channel.mask[index] != 0
+            #  print(index)
+            #  assert(0)
+
             self.mutable_channel.mask.scatter_(0, index, 0.0)
             return True
         else:
@@ -128,10 +136,13 @@ class GroupFisherChannelUnit(L1MutableChannelUnit):
     def importance(self):
         """The importance of each channel."""
         fisher = self.normalized_fisher_info.clone()
-        mask = self.mutable_channel.current_mask
-        n_mask = (1 - mask.float()).bool()
-        fisher.masked_fill_(n_mask, fisher.max() + 1)
+        #  mask = self.mutable_channel.current_mask
+        #  n_mask = (1 - mask.float()).bool()
+        #  print(f'before set fisher={fisher}')
+        #  fisher.masked_fill_(n_mask, fisher.max() + 1)
+        #  print(f'after set {fisher.max()} to {n_mask}, fisher={fisher}')
         return fisher
+        #  return fisher[mask]
 
     def reset_fisher_info(self) -> None:
         """Reset the related fisher info."""
@@ -152,10 +163,15 @@ class GroupFisherChannelUnit(L1MutableChannelUnit):
     @property
     def current_batch_fisher(self) -> torch.Tensor:
         """Accumulate the unit's fisher info of this batch."""
+        """
+        應該要讓他在加的過程中就做 normalize
+        """
         with torch.no_grad():
             fisher: torch.Tensor = 0
             for module in self.input_related_dynamic_ops:
-                fisher = fisher + self._fisher_of_a_module(module)
+                fisher = fisher + (self._fisher_of_a_module(module) / 1e6)
+                #  fisher = fisher + (self._fisher_of_a_module(module))
+            fisher=fisher * 1e6
             return (fisher**2).sum(0)  # shape: [C]
 
     @torch.no_grad()
@@ -171,9 +187,15 @@ class GroupFisherChannelUnit(L1MutableChannelUnit):
         assert len(module.recorded_input) > 0 and \
             len(module.recorded_input) == len(module.recorded_grad)
         fisher_sum: torch.Tensor = 0
+        #  print(module)
+        #  print(f'number of recorded_input ={len(module.recorded_input)}')
+        #  print(f'number of recored grad ={len(module.recorded_grad)}')
         for input, grad_input in zip(module.recorded_input,
                                      module.recorded_grad):
+            #  print(f'input_shape={input.shape}')
+            #  print(f'grad_input_shape={grad_input.shape}')
             fisher: torch.Tensor = input * grad_input
+            #  print(f'fisher shape={fisher.shape}')
             if len(fisher.shape) == 4:
                 fisher = fisher.sum(dim=[2, 3])
             assert len(fisher.shape) == 2  # B C
@@ -181,6 +203,11 @@ class GroupFisherChannelUnit(L1MutableChannelUnit):
         assert isinstance(fisher_sum, torch.Tensor)
         # expand to full num_channel
         batch_size = fisher_sum.shape[0]
+        #  print(f'fishe sum shape={fisher_sum.shape}')
+        #  print(f'fishe sum={fisher_sum}')
+        #  print(f'current mask shape={self.mutable_channel.current_mask.shape}')
+        #  print(f'current mask={self.mutable_channel.current_mask}')
+        #  assert(0)
         mask = self.mutable_channel.current_mask.unsqueeze(0).expand(
             [batch_size, self.num_channels])
         zeros = fisher_sum.new_zeros([batch_size, self.num_channels])
@@ -204,7 +231,7 @@ class GroupFisherChannelUnit(L1MutableChannelUnit):
         elif delta_type == 'act':
             delta_memory = self._delta_memory_of_a_channel
             assert delta_memory > 0
-            fisher = fisher / (float(delta_memory) / 1e6)
+            fisher = fisher / (float(delta_memory))
         elif delta_type == 'none':
             pass
         else:

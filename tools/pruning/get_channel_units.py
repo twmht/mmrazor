@@ -43,7 +43,8 @@ def parse_args():
 def main():
     args = parse_args()
     config = Config.fromfile(args.config)
-    default_scope = config['default_scope']
+    #  default_scope = config['default_scope']
+    default_scope = 'mmrzor'
 
     model = MODELS.build(config['model'])
     if isinstance(model, BaseAlgorithm):
