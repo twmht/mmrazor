@@ -6,6 +6,8 @@ import torch.nn
 from mmrazor.registry import TASK_UTILS
 from .base_estimator import BaseEstimator
 from .counters import get_model_flops_params, get_model_latency
+#  from chef.models.mutators.utils import get_metric, Metric
+from fvcore.nn import activation_count, flop_count
 
 
 @TASK_UTILS.register_module()
@@ -134,6 +136,9 @@ class ResourceEstimator(BaseEstimator):
 
         model.eval()
         flops, params = get_model_flops_params(model, **flops_params_cfg)
+        inputs=torch.randn(self.input_shape).float().to(next(model.parameters()).device)
+        #  acts=activation_count(model, inputs)
+        acts=sum(activation_count(model, inputs)[0].values())
         if measure_latency:
             latency = get_model_latency(model, **latency_cfg)
         else:
@@ -141,6 +146,7 @@ class ResourceEstimator(BaseEstimator):
 
         resource_metrics.update({
             'flops': flops,
+            'act': acts,
             'params': params,
             'latency': latency
         })

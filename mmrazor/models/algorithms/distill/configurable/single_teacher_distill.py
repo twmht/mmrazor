@@ -67,7 +67,7 @@ class SingleTeacherDistill(BaseAlgorithm):
             self.set_module_inplace_false(teacher, 'self.teacher')
 
         if teacher_ckpt:
-            _ = load_checkpoint(self.teacher, teacher_ckpt)
+            _ = load_checkpoint(self.teacher, teacher_ckpt, map_location='cpu')
             # avoid loaded parameters be overwritten
             self.teacher._is_init = True
         self.teacher_trainable = teacher_trainable
