@@ -14,7 +14,8 @@ def get_module_device(module: nn.Module) -> torch.device:
     try:
         next(module.parameters())
     except StopIteration as e:
-        raise ValueError('The input module should contain parameters.') from e
+        print(module.weight)
+        raise ValueError(f'The input module {module} should contain parameters.') from e
 
     if next(module.parameters()).is_cuda:
         return next(module.parameters()).get_device()

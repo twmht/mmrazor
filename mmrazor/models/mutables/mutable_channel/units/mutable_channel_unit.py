@@ -223,16 +223,21 @@ class MutableChannelUnit(ChannelUnit):
                 model = getattr(model, sub_name)
             return model
 
+        #  print(self.input_related)
+        #  print(self.output_related)
+        #  assert(0)
         for channel in list(self.input_related) + list(self.output_related):
+            #  print(channel.module)
             if isinstance(channel.module, nn.Module):
                 module = get_module(model, channel.name)
-                if type(module) in dynamicop_map:
+                if type(module) in dynamicop_map and module.weight is not None:
                     new_module = dynamicop_map[type(module)].convert_from(
                         module).to(get_module_device(module))
                     replace_op(model, channel.name, new_module)
                     channel.module = new_module
                 else:
                     channel.module = module
+        #  assert(0)
 
     @staticmethod
     def _register_channel_container(

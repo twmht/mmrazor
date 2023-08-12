@@ -36,7 +36,8 @@ if __name__ == '__main__':
     H = args.H
     W = args.W
 
-    default_scope = config['default_scope']
+    #  default_scope = config['default_scope']
+    default_scope = 'mmrazor'
     model_config = config['model']
     # model_config['_scope_'] = default_scope
     model: ItePruneAlgorithm = MODELS.build(model_config)
